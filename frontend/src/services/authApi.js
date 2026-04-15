@@ -61,3 +61,21 @@ export function updateJob(jobId, jobData, token) {
 export function deleteJob(jobId, token) {
   return request(`/jobs/${jobId}`, {}, 'DELETE', token);
 }
+
+// Job Applications API functions - Admin
+export function getAllApplications(token) {
+  return request('/admin/applications', {}, 'GET', token);
+}
+
+export function updateApplicationStatus(applicationId, newStatus, token) {
+  return request(`/admin/applications/${applicationId}/status?new_status=${newStatus}`, {}, 'PUT', token);
+}
+
+// User job applications
+export function applyForJob(jobId, token) {
+  return request('/applications/apply', { job_id: jobId }, 'POST', token);
+}
+
+export function getMyApplications(token) {
+  return request('/applications/my-applications', {}, 'GET', token);
+}

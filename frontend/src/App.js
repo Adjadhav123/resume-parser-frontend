@@ -6,6 +6,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import AdminRegisterPage from './pages/AdminRegisterPage';
 import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
+import AllJobsPage from './pages/AllJobsPage';
 import './App.css';
 
 function getCurrentPath() {
@@ -48,6 +49,10 @@ function App() {
 
   if (path === '/user/dashboard') {
     return <UserDashboard onNavigate={handleNavigate} />;
+  }
+
+  if (path === '/jobs/browse') {
+    return <AllJobsPage onNavigate={handleNavigate} />;
   }
 
   if (path === '/register') {

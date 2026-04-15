@@ -119,6 +119,17 @@ const styles = `
     background: rgba(255,59,48,0.25);
   }
 
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0f;
+    border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+  .btn-primary:hover {
+    background: #d4f75a;
+    box-shadow: 0 0 24px rgba(200,245,66,0.35);
+  }
+
   .container {
     position: relative;
     z-index: 1;
@@ -542,62 +553,15 @@ function UserDashboard({ onNavigate }) {
     }
   };
 
-  const fetchAllJobs = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Try to fetch publicly available jobs first
-      const response = await fetch('http://127.0.0.1:8000/jobs/browse');
-      
-      const data = await response.json().catch(() => []);
-      setJobs(Array.isArray(data) ? data : []);
-      setFilteredJobs(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.log('Fetching all jobs...');
-      // If public fails, try all jobs
-      try {
-        const response = await fetch('http://127.0.0.1:8000/jobs/all-jobs');
-        const data = await response.json().catch(() => []);
-        setJobs(Array.isArray(data) ? data : []);
-        setFilteredJobs(Array.isArray(data) ? data : []);
-      } catch {
-        setJobs([]);
-        setFilteredJobs([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (!token) {
       onNavigate('/login');
       return;
     }
-    fetchAllJobs();
-  }, [token, fetchAllJobs, onNavigate]);
+  }, [token, onNavigate]);
 
-  // Handle search and filter
-  useEffect(() => {
-    let filtered = jobs;
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (job) =>
-          job.job_title?.toLowerCase().includes(query) ||
-          job.company_name?.toLowerCase().includes(query) ||
-          job.location?.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter((job) => job.status === selectedStatus);
-    }
-
-    setFilteredJobs(filtered);
-  }, [jobs, searchQuery, selectedStatus]);
+  // Handle search and filter - not needed on dashboard anymore
+  // kept for backward compatibility if needed
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -673,6 +637,13 @@ function UserDashboard({ onNavigate }) {
           <span className="logo-badge">User</span>
         </div>
         <div className="nav-actions">
+          <button 
+            className="btn btn-primary" 
+            onClick={() => onNavigate('/jobs/browse')}
+            style={{ width: 'auto' }}
+          >
+            Show All Jobs 💼
+          </button>
           <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
             {getUserEmail()}
           </span>
@@ -751,139 +722,6 @@ function UserDashboard({ onNavigate }) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* All Jobs Section */}
-        <div className="section-divider">
-          <h2>Browse All Jobs 💼</h2>
-          <p style={{ color: 'var(--muted)' }}>Explore more opportunities</p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search by job title, company, or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* Status Filters */}
-        <div className="filters">
-          <button
-            className={`filter-btn ${selectedStatus === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedStatus('all')}
-          >
-            All Jobs
-          </button>
-          <button
-            className={`filter-btn ${selectedStatus === 'active' ? 'active' : ''}`}
-            onClick={() => setSelectedStatus('active')}
-          >
-            Active
-          </button>
-          <button
-            className={`filter-btn ${selectedStatus === 'inactive' ? 'active' : ''}`}
-            onClick={() => setSelectedStatus('inactive')}
-          >
-            Inactive
-          </button>
-          <button
-            className={`filter-btn ${selectedStatus === 'draft' ? 'active' : ''}`}
-            onClick={() => setSelectedStatus('draft')}
-          >
-            Draft
-          </button>
-        </div>
-
-        {/* Jobs Grid */}
-        {loading ? (
-          <div className="loading">
-            <h2>Loading jobs...</h2>
-          </div>
-        ) : filteredJobs.length === 0 ? (
-          <div className="empty-state">
-            <h2>No jobs found</h2>
-            <p>
-              {searchQuery || selectedStatus !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Check back soon for new opportunities!'}
-            </p>
-          </div>
-        ) : (
-          <div className="jobs-grid">
-            {filteredJobs.map((job) => (
-              <div key={job.job_id} className="job-card">
-                <div className="job-header">
-                  <div className="job-info">
-                    <h3 className="job-title">{job.job_title}</h3>
-                    <p className="job-company">{job.company_name}</p>
-                  </div>
-                  <span
-                    className="skill-tag"
-                    style={{
-                      background: job.status === 'active' 
-                        ? 'rgba(76,175,80,0.15)' 
-                        : job.status === 'draft'
-                        ? 'rgba(255,152,0,0.15)'
-                        : 'rgba(255,59,48,0.15)',
-                      color: job.status === 'active' 
-                        ? '#4caf50' 
-                        : job.status === 'draft'
-                        ? '#ff9800'
-                        : '#ff6b6b',
-                      border: job.status === 'active'
-                        ? '1px solid rgba(76,175,80,0.3)'
-                        : job.status === 'draft'
-                        ? '1px solid rgba(255,152,0,0.3)'
-                        : '1px solid rgba(255,59,48,0.3)',
-                    }}
-                  >
-                    {job.status}
-                  </span>
-                </div>
-
-                <div className="job-meta">
-                  <div className="meta-item">
-                    <span className="meta-label">📍 Location</span>
-                    <span className="meta-value">{job.location}</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-label">📅 Experience</span>
-                    <span className="meta-value">{job.experience_years} years</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-label">💰 Salary</span>
-                    <span className="meta-value">{job.salary_range || 'Competitive'}</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-label">⏰ Type</span>
-                    <span className="meta-value">{job.job_type}</span>
-                  </div>
-                </div>
-
-                <p className="job-description">{job.description}</p>
-
-                <div className="job-skills">
-                  {job.required_skills?.map((skill, idx) => (
-                    <span key={idx} className="skill-tag">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="job-actions">
-                  <button className="btn btn-view">
-                    View Details →
-                  </button>
-                  <button className="btn btn-save">
-                    ♥ Save Job
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>

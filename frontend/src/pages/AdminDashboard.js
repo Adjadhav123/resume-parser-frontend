@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getAllJobs, createJob, updateJob, deleteJob } from '../services/authApi';
+import { getAllJobs, createJob, updateJob, deleteJob, getAllApplications, updateApplicationStatus } from '../services/authApi';
 
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
@@ -362,16 +362,185 @@ const styles = `
     font-size: 0.9rem;
   }
 
+  .tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    position: relative;
+    bottom: -1px;
+  }
+
+  .tab:hover {
+    color: var(--text);
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .application-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .application-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 32px rgba(200,245,66,0.1);
+  }
+
+  .application-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+
+  .candidate-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .candidate-email {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .status-applied {
+    background: rgba(100,200,255,0.15);
+    color: #64c8ff;
+  }
+
+  .status-interviewing {
+    background: rgba(255,193,7,0.15);
+    color: #ffc107;
+  }
+
+  .status-rejected {
+    background: rgba(255,59,48,0.15);
+    color: #ff6b6b;
+  }
+
+  .status-accepted {
+    background: rgba(76,175,80,0.15);
+    color: #4caf50;
+  }
+
+  .application-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .meta-item-app {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .meta-label-app {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .meta-value-app {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .resume-section {
+    background: rgba(200,245,66,0.05);
+    border: 1px solid rgba(200,245,66,0.1);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .resume-title {
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+
+  .resume-content {
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .application-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .status-select {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .status-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(200,245,66,0.1);
+  }
+
   @media (max-width: 640px) {
     nav { padding: 16px 20px; }
     .container { padding: 100px 16px 30px; }
     .header { flex-direction: column; gap: 16px; }
     .modal-content { padding: 24px; }
+    .tabs { flex-wrap: wrap; }
+    .application-meta { grid-template-columns: 1fr; }
+    .application-actions { flex-direction: column; }
   }
 `;
 
 function AdminDashboard({ onNavigate }) {
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [currentTab, setCurrentTab] = useState('jobs');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -403,13 +572,29 @@ function AdminDashboard({ onNavigate }) {
     }
   }, [token]);
 
+  const fetchApplications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllApplications(token);
+      setApplications(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError('Failed to load applications');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!token) {
       onNavigate('/admin/login');
       return;
     }
-    fetchJobs();
-  }, [token, fetchJobs, onNavigate]);
+    if (currentTab === 'jobs') {
+      fetchJobs();
+    } else if (currentTab === 'applications') {
+      fetchApplications();
+    }
+  }, [token, currentTab, fetchJobs, fetchApplications, onNavigate]);
 
   const handleOpenModal = (job = null) => {
     if (job) {
@@ -545,26 +730,46 @@ function AdminDashboard({ onNavigate }) {
 
       <div className="container">
         <div className="header">
-          <h1>Job Management 💼</h1>
-          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-            + New Job
+          <h1>{currentTab === 'jobs' ? 'Job Management' : 'Job Applications'} 💼</h1>
+          {currentTab === 'jobs' && (
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              + New Job
+            </button>
+          )}
+        </div>
+
+        <div className="tabs">
+          <button
+            className={`tab ${currentTab === 'jobs' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('jobs')}
+          >
+            All Jobs
+          </button>
+          <button
+            className={`tab ${currentTab === 'applications' ? 'active' : ''}`}
+            onClick={() => setCurrentTab('applications')}
+          >
+            Applications
           </button>
         </div>
 
         {message && <div className="success-msg">{message}</div>}
         {error && <div className="error-msg">{error}</div>}
 
-        {loading ? (
-          <div className="empty-state">
-            <h2>Loading jobs...</h2>
-          </div>
-        ) : jobs.length === 0 ? (
-          <div className="empty-state">
-            <h2>No jobs yet</h2>
-            <p>Create your first job posting to get started!</p>
-          </div>
-        ) : (
-          <div className="jobs-grid">
+        {currentTab === 'jobs' ? (
+          // Jobs Tab
+          <>
+            {loading ? (
+              <div className="empty-state">
+                <h2>Loading jobs...</h2>
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className="empty-state">
+                <h2>No jobs yet</h2>
+                <p>Create your first job posting to get started!</p>
+              </div>
+            ) : (
+              <div className="jobs-grid">
             {jobs.map((job) => (
               <div key={job.job_id} className="job-card">
                 <div className="job-header">
@@ -620,7 +825,113 @@ function AdminDashboard({ onNavigate }) {
                 </div>
               </div>
             ))}
-          </div>
+              </div>
+            )}
+          </>
+        ) : (
+          // Applications Tab
+          <>
+            {loading ? (
+              <div className="empty-state">
+                <h2>Loading applications...</h2>
+              </div>
+            ) : applications.length === 0 ? (
+              <div className="empty-state">
+                <h2>No applications yet</h2>
+                <p>Job applications will appear here.</p>
+              </div>
+            ) : (
+              <div>
+                {applications.map((app) => (
+                  <div key={app.application_id} className="application-card">
+                    <div className="application-header">
+                      <div>
+                        <div className="candidate-name">{app.candidate_info?.name}</div>
+                        <div className="candidate-email">{app.candidate_info?.email}</div>
+                      </div>
+                      <span className={`status-badge status-${app.status}`}>
+                        {app.status}
+                      </span>
+                    </div>
+
+                    <div className="application-meta">
+                      <div className="meta-item-app">
+                        <span className="meta-label-app">Position</span>
+                        <span className="meta-value-app">{app.job_info?.job_title}</span>
+                      </div>
+                      <div className="meta-item-app">
+                        <span className="meta-label-app">Company</span>
+                        <span className="meta-value-app">{app.job_info?.company_name}</span>
+                      </div>
+                      <div className="meta-item-app">
+                        <span className="meta-label-app">Location</span>
+                        <span className="meta-value-app">{app.job_info?.location}</span>
+                      </div>
+                      <div className="meta-item-app">
+                        <span className="meta-label-app">Applied On</span>
+                        <span className="meta-value-app">
+                          {new Date(app.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {app.resume_info && (
+                      <div className="resume-section">
+                        <div className="resume-title">📄 Candidate Resume</div>
+                        <div className="resume-content">
+                          <strong>Name:</strong> {app.resume_info.name} <br />
+                          <strong>Email:</strong> {app.resume_info.email} <br />
+                          {app.resume_info.phone && (
+                            <>
+                              <strong>Phone:</strong> {app.resume_info.phone} <br />
+                            </>
+                          )}
+                          {app.resume_info.experience_years && (
+                            <>
+                              <strong>Experience:</strong> {app.resume_info.experience_years} years <br />
+                            </>
+                          )}
+                          {app.resume_info.skills && (
+                            <>
+                              <strong>Skills:</strong> {app.resume_info.skills} <br />
+                            </>
+                          )}
+                          {app.resume_info.education && (
+                            <>
+                              <strong>Education:</strong> {app.resume_info.education}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="application-actions">
+                      <select
+                        className="status-select"
+                        value={app.status}
+                        onChange={async (e) => {
+                          try {
+                            await updateApplicationStatus(app.application_id, e.target.value, token);
+                            setMessage('Application status updated!');
+                            await fetchApplications();
+                            setTimeout(() => setMessage(''), 3000);
+                          } catch (err) {
+                            setError('Failed to update status: ' + err.message);
+                            setTimeout(() => setError(''), 5000);
+                          }
+                        }}
+                      >
+                        <option value="applied">Applied</option>
+                        <option value="interviewing">Interviewing</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
