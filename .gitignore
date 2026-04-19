@@ -109,9 +109,9 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
-# Local development
-local_settings.py
 
 node_modules/
-.cache/
 frontend/node_modules/
+.cache/
+dist/
+build/
