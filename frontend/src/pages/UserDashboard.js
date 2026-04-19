@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { uploadResume } from '../services/resumeApi';
 
 const styles = `
@@ -535,11 +535,6 @@ function UserDashboard({ onNavigate }) {
   const [matches, setMatches] = useState([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const [jobs, setJobs] = useState([]);
-  const [filteredJobs, setFilteredJobs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
   const token = localStorage.getItem('access_token');
 
   // Get user info from token or local state
