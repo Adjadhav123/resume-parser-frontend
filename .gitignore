@@ -111,3 +111,7 @@ yarn-error.log*
 
 # Local development
 local_settings.py
+
+node_modules/
+.cache/
+frontend/node_modules/
